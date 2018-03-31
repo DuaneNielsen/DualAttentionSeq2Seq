@@ -14,6 +14,6 @@ class TestSimpleLSTM(TestCase):
 
     def test_forward(self):
         input = ( Variable(torch.randn(1, 2, 4).double(), requires_grad=True),)
-        test = gradcheck(SimpleLSTM(1, 2, 4, 1).double(), input, eps=1e-6, atol=1e-4)
+        test = gradcheck(SimpleLSTM(2, 4, 1).double(), input, eps=1e-6, atol=1e-4)
         print(test)
 

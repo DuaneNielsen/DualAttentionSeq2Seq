@@ -1,5 +1,5 @@
 from data import SetGenerator, PlotOutput
-from model import SimpleLSTM
+from model import NaiveSeq2Seq
 import torch
 from torch.autograd import Variable
 from sgdr import SGDRScheduler
@@ -23,6 +23,7 @@ def main():
     input_dims = 3
     sequence_length = 10
     cell_size = 2
+    encoded_cell_size = 2
 
     # Learning Rates
     max_rate = 0.1
@@ -39,13 +40,13 @@ def main():
         .train_valid(percent_as_float=0.05, batch_size=batch_size)
 
     # setup model
-    model = SimpleLSTM(batch_size, input_dims, sequence_length, cell_size)
+    model = NaiveSeq2Seq(input_dims, sequence_length, cell_size, encoded_cell_size=2)
 
     criterion = torch.nn.MSELoss()
     optimiser = torch.optim.SGD(model.parameters(), lr=max_rate)
     scheduler = SGDRScheduler(optimiser, min_rate, max_rate, steps_per_cycle, warmup, 0)
 
-    for epoch in tqdm(range(10)):
+    for epoch in tqdm(range(70)):
 
         for minibatch in train:
             input = Variable(minibatch[0])

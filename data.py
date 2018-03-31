@@ -71,7 +71,7 @@ class SetGenerator:
         final_tensor = torch.stack(batch_rows, dim=0)
 
         # compuate target
-        target_tensor = final_tensor[:, self.target_index, :].clone()
+        target_tensor = final_tensor[:, self.target_index, :].clone().unsqueeze(1)
 
         # wrap and return
         return torch.utils.data.TensorDataset(final_tensor, target_tensor)
@@ -105,13 +105,13 @@ class PlotOutput:
 
     def draw(self):
 
-        if len(self.target.size()) == 2:
-            target = self.target[0]
+        if len(self.target.size()) == 3:
+            target = self.target[0, 0, :]
         else:
             target = self.target
 
-        if len(self.output.size()) == 2:
-            output = self.output[0]
+        if len(self.output.size()) == 3:
+            output = self.output[0, 0, :]
         else:
             output = self.output
 

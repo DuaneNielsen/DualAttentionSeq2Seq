@@ -4,7 +4,7 @@ from torch.autograd import Variable
 
 
 class SimpleLSTM(nn.Module):
-    def __init__(self, batch_size, input_dims, sequence_length, cell_size, output_features=1):
+    def __init__(self, input_dims, sequence_length, cell_size, output_features=1):
         super(SimpleLSTM, self).__init__()
         self.input_dims = input_dims
         self.sequence_length = sequence_length
@@ -22,9 +22,25 @@ class SimpleLSTM(nn.Module):
             h_t, c_t = self.lstm(input_t.squeeze(2), (h_t, c_t))
             outputs.append(self.to_output(h_t))
 
-        return torch.cat(outputs, dim=1)
+        return torch.stack(outputs, dim=2)
 
     def init_hidden(self, batch_size):
         hidden = Variable(next(self.parameters()).data.new(batch_size, self.cell_size), requires_grad=False)
         cell = Variable(next(self.parameters()).data.new(batch_size, self.cell_size), requires_grad=False)
         return hidden.zero_(), cell.zero_()
+
+
+class NaiveSeq2Seq(nn.Module):
+    def __init__(self, input_dims, sequence_length, cell_size, encoded_cell_size):
+        super(NaiveSeq2Seq, self).__init__()
+        self.input_dims = input_dims
+        self.sequence_length = sequence_length
+        self.cell_size = cell_size
+        self.encoded_cell_size = encoded_cell_size
+
+        self.encoder = SimpleLSTM(input_dims, sequence_length, cell_size, encoded_cell_size)
+        self.decoder = SimpleLSTM(encoded_cell_size, sequence_length, cell_size)
+
+    def forward(self, input):
+        encoded = self.encoder(input)
+        return self.decoder(encoded)
