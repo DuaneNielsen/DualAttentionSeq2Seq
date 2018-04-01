@@ -76,7 +76,7 @@ class AttentionDecoder(nn.Module):
 
         for input_t in torch.chunk(input, self.sequence_length, dim=2):
 
-            U = self.U(input)
+            U = self.U(e)
             W = self.W(torch.cat((h_t, c_t), dim=1).unsqueeze(1))
             A = self.relu_time(torch.add(U, W))
             V = self.V(A)

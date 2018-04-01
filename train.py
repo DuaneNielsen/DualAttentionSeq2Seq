@@ -9,10 +9,11 @@ from tqdm import tqdm
 import monitors
 from monitors import SummaryWriterWithGlobal
 
+
 def plotResult(model, dataset):
     for minibatch in dataset:
-        input = Variable(minibatch[0])
-        target = Variable(minibatch[1])
+        input = Variable(minibatch[0]).cuda()
+        target = Variable(minibatch[1]).cuda()
         output = model(input)
         PlotOutput(output, target, title='final result').draw()
         break
@@ -41,7 +42,7 @@ def main():
         .train_valid(percent_as_float=0.05, batch_size=batch_size)
 
     # setup model
-    model = AttentionDecoder(input_dims, sequence_length, cell_size)
+    model = AttentionDecoder(input_dims, sequence_length, cell_size).cuda()
 
     # hooks
     def monitorTemporalAttention(self, input, output):
@@ -53,11 +54,11 @@ def main():
     optimiser = torch.optim.SGD(model.parameters(), lr=max_rate)
     scheduler = SGDRScheduler(optimiser, min_rate, max_rate, steps_per_cycle, warmup, 0)
 
-    for epoch in tqdm(range(600)):
+    for epoch in tqdm(range(1)):
 
         for minibatch in train:
-            input = Variable(minibatch[0])
-            target = Variable(minibatch[1])
+            input = Variable(minibatch[0]).cuda()
+            target = Variable(minibatch[1]).cuda()
             optimiser.zero_grad()
             output = model(input)
             loss = criterion(output, target)
@@ -69,8 +70,8 @@ def main():
             writer.add_scalar('loss/learning rate', tu.get_learning_rate(optimiser), writer.global_step)
 
         for minibatch in valid:
-            input = Variable(minibatch[0])
-            target = Variable(minibatch[1])
+            input = Variable(minibatch[0]).cuda()
+            target = Variable(minibatch[1]).cuda()
             output = model(input)
             loss = criterion(output, target)
             writer.step()
