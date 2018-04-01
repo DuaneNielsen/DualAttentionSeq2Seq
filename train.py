@@ -6,7 +6,8 @@ from sgdr import SGDRScheduler
 from tensorboardX import SummaryWriter
 import tensorboard_utils as tu
 from tqdm import tqdm
-
+import monitors
+from monitors import SummaryWriterWithGlobal
 
 def plotResult(model, dataset):
     for minibatch in dataset:
@@ -33,7 +34,7 @@ def main():
 
     # init Tensorboard
     tensorboard_step = 0
-    writer = SummaryWriter(comment="DSARNN run " + str(1))
+    writer = SummaryWriterWithGlobal(comment="DSARNN run " + str(1))
 
     # grab data
     train, valid = SetGenerator(sequence_length, time_steps=40000, target_index=0)\
@@ -41,6 +42,12 @@ def main():
 
     # setup model
     model = AttentionDecoder(input_dims, sequence_length, cell_size)
+
+    # hooks
+    def monitorTemporalAttention(self, input, output):
+        if writer.global_step % 10 == 0:
+            monitors.monitorSoftmax(self, input, output, 'temporal', writer, dim=2)
+    model.softmax_time.register_forward_hook(monitorTemporalAttention)
 
     criterion = torch.nn.MSELoss()
     optimiser = torch.optim.SGD(model.parameters(), lr=max_rate)
@@ -57,17 +64,17 @@ def main():
             loss.backward()
             optimiser.step()
             scheduler.step()
-            tensorboard_step += 1
-            writer.add_scalar('loss/training loss', loss, tensorboard_step)
-            writer.add_scalar('loss/learning rate', tu.get_learning_rate(optimiser), tensorboard_step)
+            writer.step()
+            writer.add_scalar('loss/training loss', loss, writer.global_step)
+            writer.add_scalar('loss/learning rate', tu.get_learning_rate(optimiser), writer.global_step)
 
         for minibatch in valid:
             input = Variable(minibatch[0])
             target = Variable(minibatch[1])
             output = model(input)
             loss = criterion(output, target)
-            tensorboard_step += 1
-            writer.add_scalar('loss/test loss', loss, tensorboard_step)
+            writer.step()
+            writer.add_scalar('loss/test loss', loss, writer.global_step)
 
     plotResult(model, valid)
 

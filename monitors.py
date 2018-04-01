@@ -11,19 +11,19 @@ Compuates the entropy of a softmax
 class SoftMaxEntropy:
 
     @staticmethod
-    def entropy(softmax_output):
+    def entropy(softmax_output, dim):
         sfo = softmax_output.data
-        entropy = (- sfo * sfo.log()).sum(1)
+        entropy = (- sfo * sfo.log()).sum(dim)
         return entropy
 
     @staticmethod
-    def aveEntropy(softmax_output):
-        entropy = SoftMaxEntropy.entropy(softmax_output)
+    def aveEntropy(softmax_output, dim):
+        entropy = SoftMaxEntropy.entropy(softmax_output, dim)
         return entropy.sum() / softmax_output.size(0)
 
     @staticmethod
     def maxEntropy(bins):
-        even_odds = 1/bins
+        even_odds = 1.0/bins
         max_entropy = (- even_odds * math.log(even_odds)) * bins
         return max_entropy
 
@@ -31,27 +31,27 @@ class SoftMaxEntropy:
 """
 Forward Hook for monitoring attention state and recording it to tensoboard
 """
+#todo make granular mode accept arbitrary dims
 
+def monitorSoftmax(self, input, output, name, writer, granular=False, dim=1):
 
-def monitorSoftmax(self, input, output, name, writer, tensorboard_step, granular=False):
-
-    entropy = SoftMaxEntropy.aveEntropy(output)
-    max_entropy = SoftMaxEntropy.maxEntropy(output.size(1))
-    writer.add_scalar('entropy/' + name + 'max: ' + max_entropy, entropy, tensorboard_step)
+    entropy = SoftMaxEntropy.aveEntropy(output, dim)
+    max_entropy = SoftMaxEntropy.maxEntropy(output.size(dim))
+    writer.add_scalar('entropy/' + name + 'max: ' + str(max_entropy), entropy, writer.global_step)
 
     if granular:
         # input is a tuple of packed inputs
         # output is a Variable. output.data is the Tensor we are interested
-        for i in range(output.data.size()[1]):
-            writer.add_scalar(name + '/attention_' + str(i), output.data[0, i], tensorboard_step)
+        for i in range(output.data.size()[dim]):
+            writer.add_scalar(name + '/attention_' + str(i), output.data[0, i], writer.global_step)
 
 
 class SummaryWriterWithGlobal(SummaryWriter):
     def __init__(self, comment):
-        super(comment=comment)
-        self.step = 0
+        super(SummaryWriterWithGlobal, self).__init__()
+        self.global_step = 0
 
     def step(self):
-        self.step += 1
+        self.global_step += 1
 
 
