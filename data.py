@@ -48,8 +48,8 @@ class SetGenerator:
         x = x.reshape(self.time_steps, 1)
 
         rows.append(np.sin(line / 1.5).reshape(self.time_steps, 1))
-        rows.append(x)
-        rows.append(np.random.randn(self.time_steps).reshape(self.time_steps, 1))
+        #rows.append(x)
+        #rows.append(np.random.randn(self.time_steps).reshape(self.time_steps, 1))
 
         data = np.concatenate(rows, axis=1)
 
