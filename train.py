@@ -1,5 +1,5 @@
 from data import SetGenerator, PlotAgreement
-from model import AttentionDecoder
+from model import AttentionEncoder
 import torch
 from torch.autograd import Variable
 from sgdr import SGDRScheduler
@@ -11,8 +11,8 @@ from monitors import SummaryWriterWithGlobal
 
 def plotResult(model, dataset, writer):
     for minibatch in dataset:
-        input = Variable(minibatch[0]).cuda()
-        target = Variable(minibatch[1]).cuda()
+        input = Variable(minibatch[0])
+        target = Variable(minibatch[1])
         output = model(input)
         chart = PlotAgreement(title='Agreement', output=output, target=target)
         writer.plotImage(chart)
@@ -23,15 +23,15 @@ def main():
     for run in range(1):
 
         batch_size = 64
-        input_dims = 1
+        input_dims = 3
         sequence_length = 10
         cell_size = 2
-        encoded_cell_size = 2
+        encoded_cell_size = 1
 
         # Learning Rates
-        max_rate = 0.1
-        min_rate = 0.03
-        steps_per_cycle = 1000
+        max_rate = 0.15
+        min_rate = 0.01
+        steps_per_cycle = 2000
         warmup = 100
 
         # init Tensorboard
@@ -43,23 +43,18 @@ def main():
             .train_valid(percent_as_float=0.05, batch_size=batch_size)
 
         # setup model
-        model = AttentionDecoder(input_dims, sequence_length, cell_size).cuda()
-
-        # hooks
-        def monitorTemporalAttention(self, input, output):
-            if writer.global_step % 10 == 0:
-                monitors.monitorSoftmax(self, input, output, 'temporal', writer, dim=2)
-        model.softmax_time.register_forward_hook(monitorTemporalAttention)
+        model = AttentionEncoder(input_dims, sequence_length, cell_size, encoded_cell_size)
+        model.registerHooks(writer)
 
         criterion = torch.nn.MSELoss()
         optimiser = torch.optim.SGD(model.parameters(), lr=max_rate)
         scheduler = SGDRScheduler(optimiser, min_rate, max_rate, steps_per_cycle, warmup, 0)
 
-        for epoch in tqdm(range(1800)):
+        for epoch in tqdm(range(3000)):
 
             for minibatch in train:
-                input = Variable(minibatch[0]).cuda()
-                target = Variable(minibatch[1]).cuda()
+                input = Variable(minibatch[0])
+                target = Variable(minibatch[1])
                 optimiser.zero_grad()
                 output = model(input)
                 loss = criterion(output, target)
@@ -71,8 +66,8 @@ def main():
                 writer.add_scalar('loss/learning rate', tu.get_learning_rate(optimiser), writer.global_step)
 
             for minibatch in valid:
-                input = Variable(minibatch[0]).cuda()
-                target = Variable(minibatch[1]).cuda()
+                input = Variable(minibatch[0])
+                target = Variable(minibatch[1])
                 output = model(input)
                 loss = criterion(output, target)
                 writer.step()

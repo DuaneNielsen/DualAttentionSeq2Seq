@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torch.autograd import Variable
+import monitors
 
 
 class SimpleLSTM(nn.Module):
@@ -44,6 +45,75 @@ class NaiveSeq2Seq(nn.Module):
     def forward(self, input):
         encoded = self.encoder(input)
         return self.decoder(encoded)
+
+
+class DualAttentionSeq2Seq(nn.Module):
+    def __init__(self, input_dims, sequence_length, cell_size, encoded_cell_size):
+        super(DualAttentionSeq2Seq, self).__init__()
+        self.input_dims = input_dims
+        self.sequence_length = sequence_length
+        self.cell_size = cell_size
+        self.encoded_cell_size = encoded_cell_size
+
+        self.encoder = SimpleLSTM(input_dims, sequence_length, cell_size, encoded_cell_size)
+        self.decoder = AttentionDecoder(encoded_cell_size, sequence_length, cell_size)
+
+    def forward(self, input):
+        encoded = self.encoder(input)
+        return self.decoder(encoded)
+
+
+class AttentionEncoder(nn.Module):
+    def __init__(self, input_dims, sequence_length, cell_size, output_features=1):
+        super(AttentionEncoder, self).__init__()
+        self.input_dims = input_dims
+        self.sequence_length = sequence_length
+        self.cell_size = cell_size
+        self.lstm = nn.LSTMCell(input_dims, cell_size)
+        self.to_output = nn.Linear(cell_size, output_features)
+
+        # attention over inputs
+        self.U = nn.Linear(input_dims, input_dims)
+        self.W = nn.Linear(cell_size * 2, input_dims)
+        self.relu = nn.ReLU()
+        self.V = nn.Linear(input_dims, input_dims)
+        self.softmax = nn.Softmax(dim=1)
+
+    def forward(self, input):
+
+        h_t, c_t = self.init_hidden(input.size(0))
+
+        outputs = []
+
+        for raw_input_t in torch.chunk(input, self.sequence_length, dim=2):
+
+            input_t = raw_input_t.squeeze(dim=2)
+
+            # attention over inputs
+            U = self.U(input_t)
+            W = self.W(torch.cat((h_t, c_t), dim=1))
+            A = self.relu(torch.add(U, W))
+            V = self.V(A)
+            alpha = self.softmax(V)
+
+            inputWithAttention = input_t * alpha
+
+            h_t, c_t = self.lstm(inputWithAttention, (h_t, c_t))
+            outputs.append(self.to_output(h_t))
+
+        return torch.stack(outputs, dim=2)
+
+    def init_hidden(self, batch_size):
+        hidden = Variable(next(self.parameters()).data.new(batch_size, self.cell_size), requires_grad=False)
+        cell = Variable(next(self.parameters()).data.new(batch_size, self.cell_size), requires_grad=False)
+        return hidden.zero_(), cell.zero_()
+
+    def registerHooks(self, writer):
+        # hooks
+        def monitorAttention(self, input, output):
+            if writer.global_step % 10 == 0:
+                monitors.monitorSoftmax(self, input, output, ' input ', writer, dim=1)
+        self.softmax.register_forward_hook(monitorAttention)
 
 
 class AttentionDecoder(nn.Module):

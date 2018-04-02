@@ -49,8 +49,8 @@ class SetGenerator:
         x = x.reshape(self.time_steps, 1)
 
         rows.append(np.sin(line / 1.5).reshape(self.time_steps, 1))
-        #rows.append(x)
-        #rows.append(np.random.randn(self.time_steps).reshape(self.time_steps, 1))
+        rows.append(x)
+        rows.append(np.random.randn(self.time_steps).reshape(self.time_steps, 1))
 
         data = np.concatenate(rows, axis=1)
 
@@ -69,10 +69,10 @@ class SetGenerator:
         batch_rows = batch_rows[:-1]
 
         # now we have (batch, input, time_step in range(sequence_length))
-        final_tensor = torch.stack(batch_rows, dim=0).cuda()
+        final_tensor = torch.stack(batch_rows, dim=0)
 
         # compuate target
-        target_tensor = final_tensor[:, self.target_index, :].clone().unsqueeze(1).cuda()
+        target_tensor = final_tensor[:, self.target_index, :].clone().unsqueeze(1)
 
         # wrap and return
         return torch.utils.data.TensorDataset(final_tensor, target_tensor)
