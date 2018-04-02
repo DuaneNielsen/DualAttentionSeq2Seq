@@ -55,12 +55,16 @@ class DualAttentionSeq2Seq(nn.Module):
         self.cell_size = cell_size
         self.encoded_cell_size = encoded_cell_size
 
-        self.encoder = SimpleLSTM(input_dims, sequence_length, cell_size, encoded_cell_size)
+        self.encoder = AttentionEncoder(input_dims, sequence_length, cell_size, encoded_cell_size)
         self.decoder = AttentionDecoder(encoded_cell_size, sequence_length, cell_size)
 
     def forward(self, input):
         encoded = self.encoder(input)
         return self.decoder(encoded)
+
+    def registerHooks(self, writer):
+        self.encoder.registerHooks(writer)
+        self.decoder.registerHooks(writer)
 
 
 class AttentionEncoder(nn.Module):
@@ -168,3 +172,10 @@ class AttentionDecoder(nn.Module):
         hidden = Variable(next(self.parameters()).data.new(batch_size, self.cell_size), requires_grad=False)
         cell = Variable(next(self.parameters()).data.new(batch_size, self.cell_size), requires_grad=False)
         return hidden.zero_(), cell.zero_()
+
+    def registerHooks(self, writer):
+        # hooks
+        def monitorAttention(self, input, output):
+            if writer.global_step % 10 == 0:
+                monitors.monitorSoftmax(self, input, output, ' temporal ', writer, dim=2)
+        self.softmax_time.register_forward_hook(monitorAttention)

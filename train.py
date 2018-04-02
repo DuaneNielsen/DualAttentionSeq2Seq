@@ -1,5 +1,5 @@
 from data import SetGenerator, PlotAgreement
-from model import AttentionEncoder
+from model import DualAttentionSeq2Seq
 import torch
 from torch.autograd import Variable
 from sgdr import SGDRScheduler
@@ -29,9 +29,9 @@ def main():
         encoded_cell_size = 1
 
         # Learning Rates
-        max_rate = 0.15
-        min_rate = 0.01
-        steps_per_cycle = 2000
+        max_rate = 0.18
+        min_rate = 0.04
+        steps_per_cycle = 20000
         warmup = 100
 
         # init Tensorboard
@@ -43,14 +43,14 @@ def main():
             .train_valid(percent_as_float=0.05, batch_size=batch_size)
 
         # setup model
-        model = AttentionEncoder(input_dims, sequence_length, cell_size, encoded_cell_size)
+        model = DualAttentionSeq2Seq(input_dims, sequence_length, cell_size, encoded_cell_size)
         model.registerHooks(writer)
 
         criterion = torch.nn.MSELoss()
         optimiser = torch.optim.SGD(model.parameters(), lr=max_rate)
         scheduler = SGDRScheduler(optimiser, min_rate, max_rate, steps_per_cycle, warmup, 0)
 
-        for epoch in tqdm(range(3000)):
+        for epoch in tqdm(range(30000)):
 
             for minibatch in train:
                 input = Variable(minibatch[0])
