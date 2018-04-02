@@ -5,3 +5,6 @@ plotly
 pytest
 tensorboardX
 tqdm
+matplotlib
+pillow
+torchvision

@@ -1,6 +1,11 @@
 import math
 from tensorboardX import SummaryWriter
-
+import matplotlib.pyplot as plt
+import io
+import PIL.Image
+from torchvision.transforms import ToTensor
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib.figure import Figure
 
 """
 Compuates the entropy of a softmax
@@ -46,12 +51,43 @@ def monitorSoftmax(self, input, output, name, writer, granular=False, dim=1):
             writer.add_scalar(name + '/attention_' + str(i), output.data[0, i], writer.global_step)
 
 
+class LinePlot:
+    def __init__(self, title):
+        self.title = title
+        self.fig = Figure()
+        FigureCanvas(self.fig)
+        self.ax = self.fig.add_subplot(111)
+        self.ax.set_title(title)
+        self.buf = io.BytesIO()
+
+    def addLine(self, line):
+        self.ax.plot(line.data.cpu().numpy())
+
+    def getPlotAsTensor(self):
+        self.fig.savefig(self.buf, format='jpeg')
+        self.buf.seek(0)
+        image = PIL.Image.open(self.buf)
+        return ToTensor()(image).unsqueeze(0)
+
+    def close(self):
+        plt.close(self.fig)
+
+
 class SummaryWriterWithGlobal(SummaryWriter):
     def __init__(self, comment):
-        super(SummaryWriterWithGlobal, self).__init__()
+        super(SummaryWriterWithGlobal, self).__init__(comment=comment)
         self.global_step = 0
 
     def step(self):
         self.global_step += 1
+
+    """
+    Adds a matplotlib plot to tensorboard
+    """
+    def plotImage(self, plot):
+        self.add_image('Image', plot.getPlotAsTensor(), self.global_step)
+        plot.close()
+
+
 
 

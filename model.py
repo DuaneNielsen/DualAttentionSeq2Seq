@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from torch.autograd import Variable
-from tensorboardX import SummaryWriter
+
 
 class SimpleLSTM(nn.Module):
     def __init__(self, input_dims, sequence_length, cell_size, output_features=1):
@@ -74,7 +74,7 @@ class AttentionDecoder(nn.Module):
 
         outputs = []
 
-        for input_t in torch.chunk(input, self.sequence_length, dim=2):
+        for _ in range(self.sequence_length):
 
             U = self.U(e)
             W = self.W(torch.cat((h_t, c_t), dim=1).unsqueeze(1))
@@ -84,9 +84,13 @@ class AttentionDecoder(nn.Module):
 
             elements = input * beta
             context = torch.sum(elements, dim=2)
+            attentionOnTime = self.squash_context_on_input(torch.cat([context, h_t], dim=1))
 
-            h_t, c_t = self.lstm(context, (h_t, c_t))
-            outputs.append(self.to_output(h_t))
+            h_t, c_t = self.lstm(attentionOnTime, (h_t, c_t))
+
+            output_context = self.squash_context_on_output(torch.cat([context, h_t], dim=1))
+            output = self.output_linear(output_context)
+            outputs.append(output)
 
         return torch.stack(outputs, dim=2)
 

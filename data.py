@@ -6,7 +6,8 @@ from plotly.graph_objs import Scatter, Layout
 import torch.utils.data
 import torch.utils.data.sampler
 import math
-
+import matplotlib.pyplot as plt
+import monitors
 
 class ChunkSampler(torch.utils.data.sampler.Sampler):
     """Samples elements sequentially from some offset.
@@ -48,8 +49,8 @@ class SetGenerator:
         x = x.reshape(self.time_steps, 1)
 
         rows.append(np.sin(line / 1.5).reshape(self.time_steps, 1))
-        rows.append(x)
-        rows.append(np.random.randn(self.time_steps).reshape(self.time_steps, 1))
+        #rows.append(x)
+        #rows.append(np.random.randn(self.time_steps).reshape(self.time_steps, 1))
 
         data = np.concatenate(rows, axis=1)
 
@@ -91,10 +92,26 @@ class SetGenerator:
         return loader_train, loader_val
 
 
+"""
+accepts vector of points, plots first input and first element of batch
 
 """
-expects (batch, time_steps)
+
+
+class PlotAgreement(monitors.LinePlot):
+    def __init__(self, title, output, target):
+        super(PlotAgreement, self).__init__(title)
+        self.addLine(output[0, 0, :])
+        self.addLine(target[0, 0, :])
+
+
+
+
 """
+expects (batch, time_steps), outputs plot to plotly
+"""
+
+
 class PlotOutput:
 
     def __init__(self, output, target, title, filename='output.html'):
@@ -120,7 +137,7 @@ class PlotOutput:
 
         data = [target_trace, output_trace]
 
-        plotly.offline.plot(data, filename=self.filename, config=Layout(title=self.title))
+        plotly.offline.plot(data, image='png', filename=self.filename, config=Layout(title=self.title))
 
     """
     expects vector of (time_steps)
