@@ -1,7 +1,6 @@
 numpy
 sklearn
 torch
-plotly
 pytest
 tensorboardX
 tqdm

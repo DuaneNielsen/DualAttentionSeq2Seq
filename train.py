@@ -3,7 +3,6 @@ from model import DualAttentionSeq2Seq
 import torch
 from torch.autograd import Variable
 from sgdr import SGDRScheduler
-import tensorboard_utils as tu
 from tqdm import tqdm
 import monitors
 from monitors import SummaryWriterWithGlobal
@@ -35,7 +34,6 @@ def main():
         warmup = 100
 
         # init Tensorboard
-        tensorboard_step = 0
         writer = SummaryWriterWithGlobal(comment="DSARNN run " + str(run))
 
         # grab data
@@ -50,7 +48,8 @@ def main():
         optimiser = torch.optim.SGD(model.parameters(), lr=max_rate)
         scheduler = SGDRScheduler(optimiser, min_rate, max_rate, steps_per_cycle, warmup, 0)
 
-        for epoch in tqdm(range(30000)):
+        # around 20 - 40 k epochs for training
+        for epoch in tqdm(range(1)):
 
             for minibatch in train:
                 input = Variable(minibatch[0])
@@ -63,7 +62,7 @@ def main():
                 scheduler.step()
                 writer.step()
                 writer.add_scalar('loss/training loss', loss, writer.global_step)
-                writer.add_scalar('loss/learning rate', tu.get_learning_rate(optimiser), writer.global_step)
+                writer.add_scalar('loss/learning rate', monitors.get_learning_rate(optimiser), writer.global_step)
 
             for minibatch in valid:
                 input = Variable(minibatch[0])
@@ -73,7 +72,7 @@ def main():
                 writer.step()
                 writer.add_scalar('loss/test loss', loss, writer.global_step)
 
-            if epoch % 20 == 0:
+            if epoch % 200 == 0:
                 plotResult(model, valid, writer)
 
 

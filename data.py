@@ -1,12 +1,9 @@
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
 import torch
-import plotly
-from plotly.graph_objs import Scatter, Layout
 import torch.utils.data
 import torch.utils.data.sampler
 import math
-import matplotlib.pyplot as plt
 import monitors
 
 class ChunkSampler(torch.utils.data.sampler.Sampler):
@@ -103,53 +100,3 @@ class PlotAgreement(monitors.LinePlot):
         super(PlotAgreement, self).__init__(title)
         self.addLine(output[0, 0, :])
         self.addLine(target[0, 0, :])
-
-
-
-
-"""
-expects (batch, time_steps), outputs plot to plotly
-"""
-
-
-class PlotOutput:
-
-    def __init__(self, output, target, title, filename='output.html'):
-        self.target = target
-        self.output = output
-        self.title = title
-        self.filename = filename
-
-    def draw(self):
-
-        if len(self.target.size()) == 3:
-            target = self.target[0, 0, :]
-        else:
-            target = self.target
-
-        if len(self.output.size()) == 3:
-            output = self.output[0, 0, :]
-        else:
-            output = self.output
-
-        target_trace = self.trace(target, 'target')
-        output_trace = self.trace(output, 'output')
-
-        data = [target_trace, output_trace]
-
-        plotly.offline.plot(data, image='png', filename=self.filename, config=Layout(title=self.title))
-
-    """
-    expects vector of (time_steps)
-    """
-    def trace(self, series, name):
-
-        x, y = [], []
-
-        for time_step in range(series.size(0)):
-            x.append(time_step)
-            y.append(series[time_step].__float__())
-
-        return Scatter(x=x, y=y, name=name)
-
-
